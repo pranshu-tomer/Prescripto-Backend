@@ -31,3 +31,4 @@ build/
 
 ### VS Code ###
 .vscode/
+springBackend/src/main/resources/.env
