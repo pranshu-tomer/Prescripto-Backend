@@ -1,8 +1,11 @@
-package com.prescripto.springBackend;
+package com.prescripto.springBackend.repository;
 
 import com.prescripto.springBackend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface UserRepository extends JpaRepository<User,Long> {
 //    can defines custom method
+    Optional<User> findByEmail(String email);
 }
