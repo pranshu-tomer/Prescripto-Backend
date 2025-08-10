@@ -12,7 +12,8 @@ public class FilterConfig {
     public FilterRegistrationBean<AuthUserFilter> authUserFilter() {
         FilterRegistrationBean<AuthUserFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new AuthUserFilter());
-        registrationBean.addUrlPatterns("/api/user/get-profile"); // apply filter to these routes
+        registrationBean.addUrlPatterns("/api/user/get-profile");
+        registrationBean.addUrlPatterns("/api/user/update-profile");
         return registrationBean;
     }
 }

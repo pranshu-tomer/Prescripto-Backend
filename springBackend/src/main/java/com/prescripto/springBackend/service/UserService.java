@@ -1,16 +1,23 @@
 package com.prescripto.springBackend.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.prescripto.springBackend.dto.ProfileUpdateDTO;
 import com.prescripto.springBackend.model.User;
 import com.prescripto.springBackend.repository.UserRepository;
 import com.prescripto.springBackend.util.EnvUtil;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,17 +31,20 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public ResponseEntity<Map<String,Object>> registerUser(User user){
-        Map<String,Object> response = new HashMap<>();
+    @Autowired
+    private Cloudinary cloudinary;
 
-        try{
+    public ResponseEntity<Map<String, Object>> registerUser(User user) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
             String name = user.getName();
             String email = user.getEmail();
             String password = user.getPassword();
 
-            if(name == null || email == null || password == null || name.isEmpty() || email.isEmpty() || password.isEmpty()){
-                response.put("success",false);
-                response.put("message","Missing Details !!");
+            if (name == null || email == null || password == null || name.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Missing Details !!");
                 return ResponseEntity.badRequest().body(response);
             }
 
@@ -56,7 +66,7 @@ public class UserService {
             response.put("success", true);
             response.put("token", token);
             return ResponseEntity.ok(response);
-        }catch (Exception e){
+        } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -65,30 +75,30 @@ public class UserService {
 
     public ResponseEntity<Map<String, Object>> loginUser(User user) {
 
-        Map<String,Object> response = new HashMap<>();
-        try{
+        Map<String, Object> response = new HashMap<>();
+        try {
             String email = user.getEmail();
             String password = user.getPassword();
 
-            if(email == null || password == null || email.isEmpty() || password.isEmpty()){
-                response.put("success",false);
-                response.put("message","Missing Details !!");
+            if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Missing Details !!");
                 return ResponseEntity.badRequest().body(response);
             }
 
             User user1 = userRepository.findByEmail(email)
                     .orElse(null);
 
-            if(user1 == null){
-                response.put("success",false);
-                response.put("message","User does Not Exist.");
+            if (user1 == null) {
+                response.put("success", false);
+                response.put("message", "User does Not Exist.");
                 return ResponseEntity.badRequest().body(response);
             }
 
-            boolean isMatch = passwordEncoder.matches(password,user1.getPassword());
-            if(!isMatch){
-                response.put("success",false);
-                response.put("message","Invalid credentials !!");
+            boolean isMatch = passwordEncoder.matches(password, user1.getPassword());
+            if (!isMatch) {
+                response.put("success", false);
+                response.put("message", "Invalid credentials !!");
                 return ResponseEntity.badRequest().body(response);
             }
 
@@ -110,13 +120,13 @@ public class UserService {
     }
 
     public ResponseEntity<Map<String, Object>> getProfile(Long userId) {
-        Map<String,Object> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
 
-        try{
+        try {
             User curr = userRepository.findById(userId).orElse(null);
-            if(curr == null) {
-                response.put("success",false);
-                response.put("message","Can't Find User !!");
+            if (curr == null) {
+                response.put("success", false);
+                response.put("message", "Can't Find User !!");
                 return ResponseEntity.badRequest().body(response);
             }
             curr.setPassword(null);
@@ -130,4 +140,57 @@ public class UserService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    public ResponseEntity<Map<String, Object>> updateProfile(Long userId, ProfileUpdateDTO profileData) throws IOException {
+        Map<String,Object> response = new HashMap<>();
+        try {
+
+            MultipartFile image = profileData.getImage();
+            String name = profileData.getName();
+            String dob = profileData.getDob();
+            String phone = profileData.getPhone();
+            User.Gender gender = profileData.getGender();
+
+            String imageUrl = null;
+            if(image != null && !image.isEmpty()){
+                imageUrl = cloudinary.uploader()
+                        .upload(image.getBytes(), ObjectUtils.asMap("folder", "profiles"))
+                        .get("secure_url")
+                        .toString();
+            }
+
+            if(name == null || name.isEmpty()){
+                response.put("success", false);
+                response.put("message", "Missing Data");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            User user = userRepository.findById(userId).orElse(null);
+            if(user == null){
+                response.put("success", false);
+                response.put("message", "Can't Find User !!");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            user.setName(name);
+            user.setDob(dob);
+            user.setGender(gender);
+            user.setImageUrl(imageUrl);
+
+            if(phone != null && !phone.isEmpty()){
+                user.setPhone(phone);
+            }
+
+            userRepository.save(user);
+
+            response.put("success", true);
+            response.put("message","Profile Updated");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 }
+

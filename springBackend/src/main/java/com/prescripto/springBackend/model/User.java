@@ -80,11 +80,11 @@ public class User {
         this.gender = gender;
     }
 
-    public LocalDate getDob() {
+    public String getDob() {
         return dob;
     }
 
-    public void setDob(LocalDate dob) {
+    public void setDob(String dob) {
         this.dob = dob;
     }
 
@@ -100,7 +100,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    private LocalDate dob;
+    private String dob;
 
     @Override
     public String toString() {
